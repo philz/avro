@@ -572,6 +572,7 @@
       <fileset dir="src" includes="**/*.pyc" />
       <fileset dir="${basedir}/src/py/avro" includes="**/*.avsc"/>
     </delete>
+    <delete file=".classpath"/>
   </target>
 
   <!-- C Targets -->
@@ -631,5 +632,36 @@
     <available file="${c.build.dir}/Makefile" property="c-makefile-present"/>
   </target>
   <!-- End C Targets -->
+
+  <!-- Begin Eclipse targets -->
+  <target name="eclipse-classpath">
+    <pathconvert property="eclipse.entries" refid="test.java.classpath"
+ pathsep="&quot;/&gt;&#10;    &lt;classpathentry kind=&quot;lib&quot; path=&quot;" />  
+
+    <echo message="Creating .classpath"/>
+    <echo file=".classpath"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+    <!-- Classes built by ant -->
+    <classpathentry kind="lib" path="build/test/classes" sourcepath="src/test/java"/>
+    <classpathentry kind="lib" path="build/classes" sourcepath="src/java"/>
+
+    <!-- Sources -->
+    <classpathentry kind="src" path="src/java"/>
+    <classpathentry kind="src" path="src/test/java"/>
+
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+
+    <!-- Libraries -->
+    <classpathentry kind="lib" path="${eclipse.entries}"/>
+
+    <!-- Eclipse's build outputs here -->
+    <classpathentry kind="output" path="eclipse-classes"/>
+</classpath>
+]]>
+    </echo>
+  </target>
+
+  <target name="eclipse" depends="compile-test-java,eclipse-classpath" />
+  <!-- End Eclipse targets -->
 
 </project>
