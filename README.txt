@@ -25,3 +25,15 @@ One the requirements are installed, Ant can be used as follows:
  'ant jar' creates a jar in build/avro-X.X.jar
  'ant tar' makes a "release" with docs, jar, src, etc. in build/avro-X.X.tar.gz
  'ant clean' removes all generated artifacts
+
+USING ECLIPSE
+
+To use Eclipse, use the "ant eclipse" target to trigger generating a .classpath
+file, and also trigger compilation (to pull in the maven dependencies, etc.)
+You must also make sure that your avro checkout directory is "avro".  You
+should then be able to create an Eclipse project pointed to your checkout, and
+run the unit tests from Eclipse's runner.
+
+Note that the "Eclipse Builder" is configured to compile twice: once with
+Eclipse's built-in compiler, and another time with ant.  Eclipse is happier
+this way, though the classpath is configured to ignore Eclipse's compilation.
