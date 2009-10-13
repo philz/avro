@@ -17,10 +17,12 @@
  */
 package org.apache.avro;
 
+import org.apache.avro.ipc.HttpServer;
+import org.apache.avro.ipc.HttpTransceiver;
+import org.apache.avro.ipc.Server;
+import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.specific.SpecificRequestor;
 import org.apache.avro.specific.SpecificResponder;
-import org.apache.avro.ipc.*;
-import org.junit.*;
 
 import java.io.IOException;
 import java.net.URL;
@@ -28,6 +30,10 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.avro.test.BulkData;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestBulkData {
   private static final long COUNT =
