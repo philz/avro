@@ -43,7 +43,6 @@ public class DataFileReader<D> {
 
   private Map<String,byte[]> meta = new HashMap<String,byte[]>();
 
-  private long count;                           // # entries in file
   private long blockCount;                      // # entries in block
   private byte[] sync = new byte[DataFileConstants.SYNC_SIZE];
   private byte[] syncBuffer = new byte[DataFileConstants.SYNC_SIZE];
@@ -77,7 +76,6 @@ public class DataFileReader<D> {
     }
 
     this.sync = getMeta(DataFileConstants.SYNC);
-    this.count = getMetaLong(DataFileConstants.COUNT);
     String codec = getMetaString(DataFileConstants.CODEC);
     if (codec != null && ! codec.equals(DataFileConstants.NULL_CODEC)) {
       throw new IOException("Unknown codec: " + codec);

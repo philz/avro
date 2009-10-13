@@ -20,7 +20,6 @@ package org.apache.avro;
 import org.apache.avro.specific.SpecificRequestor;
 import org.apache.avro.specific.SpecificResponder;
 import org.apache.avro.ipc.*;
-import org.apache.avro.util.Utf8;
 import org.junit.*;
 
 import java.io.IOException;
@@ -54,7 +53,6 @@ public class TestBulkData {
 
   private static Server server;
   private static Transceiver client;
-  private static Requestor requestor;
   private static BulkData proxy;
 
   @Before
