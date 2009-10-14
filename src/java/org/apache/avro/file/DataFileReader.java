@@ -43,6 +43,7 @@ public class DataFileReader<D> {
 
   private Map<String,byte[]> meta = new HashMap<String,byte[]>();
 
+  private long count;                           // # entries in file
   private long blockCount;                      // # entries in block
   private byte[] sync = new byte[DataFileConstants.SYNC_SIZE];
   private byte[] syncBuffer = new byte[DataFileConstants.SYNC_SIZE];
@@ -76,6 +77,7 @@ public class DataFileReader<D> {
     }
 
     this.sync = getMeta(DataFileConstants.SYNC);
+    this.count = getMetaLong(DataFileConstants.COUNT);
     String codec = getMetaString(DataFileConstants.CODEC);
     if (codec != null && ! codec.equals(DataFileConstants.NULL_CODEC)) {
       throw new IOException("Unknown codec: " + codec);
@@ -87,7 +89,16 @@ public class DataFileReader<D> {
 
     in.seek(DataFileConstants.MAGIC.length);         // seek to start
   }
+  
 
+  /**
+   * Return the number of records in the file, according
+   * to its metadata.
+   */
+  public long getCount() {
+    return count;
+  }
+  
   /** Return the value of a metadata property. */
   public synchronized byte[] getMeta(String key) {
     return meta.get(key);
