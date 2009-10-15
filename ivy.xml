@@ -44,8 +44,6 @@
     <dependency org="junit" name="junit" rev="4.5" conf="test->default"/>
     <dependency org="checkstyle" name="checkstyle" rev="5.0"
 		conf="test->default"/>
-    <dependency org="com.google.collections" name="google-collections" 
-                rev="0.9" />
   </dependencies>
 
 </ivy-module>

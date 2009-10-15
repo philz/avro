@@ -18,29 +18,35 @@
 package org.apache.avro.tool;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.avro.specific.SpecificCompiler.SpecificCompilerTool;
-
-import com.google.common.collect.ImmutableMap;
 
 /**
  * Wrapper class for "avrotool".  This class is responsible for delegating
  * to the actual tool binaries.
+ *
+ * Note that this tool is tested via a shell script,
+ * src/test/scripts/test_avroj.sh.
  */
 public class Main {
   /**
-   * Available tools.
+   * Available tools, initialized in constructor.
    */
-  private final ImmutableMap<String, Tool> tools = new ImmutableMap.Builder<String, Tool>()
-    .put("compile", new SpecificCompilerTool())
-    .build();
-  
+  private final Map<String, Tool> tools;
+
+  private Main() {
+    tools = new TreeMap<String, Tool>();
+    tools.put("compile", new SpecificCompilerTool());
+  }
+
   public static void main(String[] args) throws Exception {
     new Main().run(args);
   }
 
   /**
-   * Delegates to tool specified on the command-line. 
+   * Delegates to tool specified on the command-line.
    */
   private void run(String[] args) throws Exception {
     if (args.length != 0) {
@@ -55,5 +61,4 @@ public class Main {
       System.err.println("\t" + k);
     }
   }
-
 }
