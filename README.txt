@@ -28,12 +28,12 @@ One the requirements are installed, Ant can be used as follows:
 
 USING ECLIPSE
 
-To use Eclipse, use the "ant eclipse" target to trigger generating a .classpath
-file, and also trigger compilation (to pull in the maven dependencies, etc.)
-You must also make sure that your avro checkout directory is "avro".  You
-should then be able to create an Eclipse project pointed to your checkout, and
-run the unit tests from Eclipse's runner.
+To use Eclipse, use the "ant eclipse" target to trigger the generation
+of an Eclipse project.  This project is automatically created by 
+the ant-eclipse tool (see http://ant-eclipse.sourceforge.net/).
+Note that to build completely, you still have to use "ant", because
+the Eclipse project depends on some generated code.
 
-Note that the "Eclipse Builder" is configured to compile twice: once with
-Eclipse's built-in compiler, and another time with ant.  Eclipse is happier
-this way, though the classpath is configured to ignore Eclipse's compilation.
+You should be able to run all the java tests in Eclipse, except
+for the InteropTest.  There is a launcher in .eclipse_launchers,
+that should work if your checkout directory is "avro".

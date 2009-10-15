@@ -2,5 +2,8 @@ build
 *.pyc
 .svn
 test-output
+
+# Eclipse-related:
 .classpath
-eclipse-classes
+.eclipse
+.settings

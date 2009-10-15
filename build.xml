@@ -57,8 +57,10 @@
   <property name="test.java.src.dir" value="${basedir}/src/test/java"/>
   <property name="test.schemata.dir" value="${basedir}/src/test/schemata"/>
   <property name="test.java.build.dir" value="${build.dir}/test"/>
-  <property name="test.java.generated.dir" value="${test.java.build.dir}/src"/>
+  <property name="test.java.generated.build.dir" value="${test.java.build.dir}/generated"/>
+  <property name="test.java.generated.dir" value="${test.java.generated.build.dir}/src"/>
   <property name="test.java.classes" value="${test.java.build.dir}/classes"/>
+  <property name="test.java.generated.classes" value="${test.java.generated.build.dir}/classes"/>
   <property name="test.java.include" value="Test*"/>
 
   <property name="javadoc.link.java"
@@ -84,6 +86,12 @@
   <property name="ivy.lib" value="${build.dir}/lib"/>
   <property name="ivy.test.lib" value="${build.dir}/test/lib"/>
 
+  <!-- Eclipse properties -->
+  <property name="build.dir.eclipse" value=".eclipse"/>
+  <property name="build.dir.eclipse-main-classes" value="${build.dir.eclipse}/classes-main"/>
+  <property name="build.dir.eclipse-main-generated-classes" value="${build.dir.eclipse}/classes-main-generated"/>
+  <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
+
   <!-- the normal classpath -->
   <path id="java.classpath">
     <pathelement location="${build.classes}"/>
@@ -101,6 +109,7 @@
 
   <path id="test.java.classpath">
     <pathelement location="${test.java.classes}" />
+    <pathelement location="${test.java.generated.classes}" />
     <fileset dir="${ivy.test.lib}">
       <include name="**/*.jar" />
     </fileset>
@@ -113,6 +122,7 @@
  
     <mkdir dir="${test.java.build.dir}"/>
     <mkdir dir="${test.java.classes}"/>
+    <mkdir dir="${test.java.generated.classes}"/>
 
     <mkdir dir="${ivy.lib}"/>
     <mkdir dir="${ivy.test.lib}"/>
@@ -218,7 +228,7 @@
   <target name="compile-test-java" depends="ivy-retrieve-test,compile-java">
     <java-avro-compiler src="${test.schemata.dir}"
 			generated="${test.java.generated.dir}"
-			dest="${test.java.classes}"
+			dest="${test.java.generated.classes}"
 			classpath="test.java.classpath"/>
     <java-compiler src="${test.java.src.dir}"
 		   dest="${test.java.classes}"
@@ -572,7 +582,6 @@
       <fileset dir="src" includes="**/*.pyc" />
       <fileset dir="${basedir}/src/py/avro" includes="**/*.avsc"/>
     </delete>
-    <delete file=".classpath"/>
   </target>
 
   <!-- C Targets -->
@@ -634,34 +643,65 @@
   <!-- End C Targets -->
 
   <!-- Begin Eclipse targets -->
-  <target name="eclipse-classpath">
-    <pathconvert property="eclipse.entries" refid="test.java.classpath"
- pathsep="&quot;/&gt;&#10;    &lt;classpathentry kind=&quot;lib&quot; path=&quot;" />  
+  <condition property="ant-eclipse.jar.exists">
+    <available file="${lib.dir}/ant-eclipse-1.0-jvm1.2.jar"/>
+  </condition>
 
-    <echo message="Creating .classpath"/>
-    <echo file=".classpath"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
-<classpath>
-    <!-- Classes built by ant -->
-    <classpathentry kind="lib" path="build/test/classes" sourcepath="src/test/java"/>
-    <classpathentry kind="lib" path="build/classes" sourcepath="src/java"/>
+  <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists"
+          description="Downloads the ant-eclipse binary.">
+    <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+         dest="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
 
-    <!-- Sources -->
-    <classpathentry kind="src" path="src/java"/>
-    <classpathentry kind="src" path="src/test/java"/>
-
-    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-
-    <!-- Libraries -->
-    <classpathentry kind="lib" path="${eclipse.entries}"/>
-
-    <!-- Eclipse's build outputs here -->
-    <classpathentry kind="output" path="eclipse-classes"/>
-</classpath>
-]]>
-    </echo>
+    <untar src="${build.dir}/ant-eclipse-1.0.bin.tar.bz2"
+           dest="${build.dir}" compression="bzip2">
+      <patternset>
+        <include name="lib/ant-eclipse-1.0-jvm1.2.jar"/>
+      </patternset>
+    </untar>
+    <delete file="${src.dir}/java/ant-eclipse-1.0.bin.tar.bz2" />
   </target>
 
-  <target name="eclipse" depends="compile-test-java,eclipse-classpath" />
+  <target name="eclipse" 
+          depends="compile-test-java,ant-eclipse-download"
+          description="Create eclipse project files">
+    <ivy:resolve useOrigin="true" conf="test"/>
+    <ivy:cachepath pathid="default.path.id" conf="default" />
+    <ivy:cachepath pathid="junit.path.id" conf="test" transitive="false"/>
+    <taskdef name="eclipse"
+             classname="prantl.ant.eclipse.EclipseTask"
+             classpathref="java.classpath" />
+    <eclipse updatealways="true">
+      <settings>
+        <jdtcore compilercompliance="6.0" />
+        <resources encoding="UTF-8" />
+      </settings>
+      <project name="${ant.project.name}" />
+      <classpath>
+        <!-- Use Eclipse to compile Avro runtime -->
+        <source path="${java.src.dir}"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${test.java.src.dir}"
+                output="${build.dir.eclipse-test-classes}" />
+        <!-- Even though these are generated, Eclipse can compile these -->
+        <source path="${build.dir}/src"
+                output="${build.dir.eclipse-main-generated-classes}" />
+        <output path="${build.dir.eclipse-main-classes}" />
+        <!-- Tests require that the generated code has paranamer applied to it,
+             so we use the ant build for that. -->
+        <library path="${test.java.generated.classes}" source="${test.java.generated.dir}"/>
+        <library pathref="default.path.id" exported="true" />
+        <library pathref="junit.path.id" exported="false" />
+       </classpath>
+    </eclipse>
+  </target>
+
+  <target name="clean-eclipse" description="Clean eclipse files">
+    <delete file=".classpath" />
+    <delete file=".eclipse" />
+    <delete file=".project" />
+    <delete dir=".settings" />
+    <delete dir="${build.dir.eclipse}" />
+  </target>
   <!-- End Eclipse targets -->
 
 </project>
