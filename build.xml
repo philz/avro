@@ -562,7 +562,10 @@
         <filter token="VERSION" value="${version}"/>
       </filterset>
     </copy>
-    <chmod file="${dist.dir}/avroj" perm="ugo+rx"/>
+    <chmod perm="ugo+rx">
+      <fileset file="${dist.dir}/avroj"/>
+      <fileset file="${dist.dir}/src/scripts/avroj.sh"/>
+    </chmod>
   </target>
 
   <macrodef name="macro_tar" description="Worker Macro for tar">
@@ -580,7 +583,13 @@
     <macro_tar param.destfile="${build.dir}/${fullname}.tar.gz">
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${fullname}/avroj" />
+          <exclude name="${fullname}/src/scripts/avroj.sh" />
           <include name="${fullname}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${fullname}/avroj" />
+          <include name="${fullname}/src/scripts/avroj.sh" />
         </tarfileset>
       </param.listofitems>
     </macro_tar>

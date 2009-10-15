@@ -23,24 +23,27 @@
 TOOL_DIR=$(dirname "$0")
 DEV=true
 if [ -d "${TOOL_DIR}/build/classes" ]; then
+  # If you've built from a tarball.
   CLASSPATH=${TOOL_DIR}/build/classes
   LIB_DIR=${TOOL_DIR}/build/lib
-elif [ -d "${TOOL_DIR}/../../build/classes" ]; then
+elif [ "scripts" = "$(basename "$TOOL_DIR")" ]; then
+  # If you're using src/scripts/avroj
   CLASSPATH=${TOOL_DIR}/../../build/classes
   LIB_DIR=${TOOL_DIR}/../../build/lib
 else
+  # If you're using the pre-built tarball.
   AVRO_JAR=${TOOL_DIR}/avro-@VERSION@.jar
-  if [ ! -f $AVRO_JAR ]; then
+  if [ ! -f "$AVRO_JAR" ]; then
     echo "Could not find Avro jar file ($AVRO_JAR)."
     exit 1
   fi
   CLASSPATH=$AVRO_JAR
-  LIB_DIR=${TOOL_DIR}/lib
+  LIB_DIR="${TOOL_DIR}"/lib
   DEV=false
 fi
 
 # Add libs to classpath
-for lib in $LIB_DIR/*.jar; do
+for lib in "$LIB_DIR"/*.jar; do
   CLASSPATH=${CLASSPATH}:$lib
 done
 
@@ -55,4 +58,4 @@ if $DEV; then
   echo "Running development avro with classpath $CLASSPATH."
 fi
 
-exec ${JAVA} -classpath $CLASSPATH org.apache.avro.tool.Main $*
+exec "${JAVA}" -classpath "$CLASSPATH" org.apache.avro.tool.Main $*
