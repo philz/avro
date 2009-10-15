@@ -265,7 +265,7 @@
     </sequential>
   </macrodef>
 
-  <target name="test" depends="test-java,test-py,test-c,test-interop"/>
+  <target name="test" depends="test-java,test-py,test-c,test-interop,test-avroj"/>
 
   <macrodef name="test-runner">
     <attribute name="files.location" />
@@ -425,6 +425,12 @@
         </py-run>
   </target>
 
+  <target name="test-avroj" depends="compile-java"
+   description="Tests avroj shell script and commands">
+    <exec executable="${basedir}/src/test/scripts/test_avroj.sh" 
+        failonerror="true" />
+  </target>
+
   <target name="pydoc" description="Generate python api docs">
     <taskdef name="py-doc" classname="org.pyant.tasks.PythonDocTask">
       <classpath refid="java.classpath" />
@@ -541,12 +547,12 @@
       <fileset file="ivy.xml"/>
     </copy>
 
-    <copy file="src/scripts/avrotool.sh" tofile="${dist.dir}/avrotool">
+    <copy file="src/scripts/avroj.sh" tofile="${dist.dir}/avroj">
       <filterset>
         <filter token="VERSION" value="${version}"/>
       </filterset>
     </copy>
-    <chmod file="${dist.dir}/avrotool" perm="ugo+rx"/>
+    <chmod file="${dist.dir}/avroj" perm="ugo+rx"/>
   </target>
 
   <macrodef name="macro_tar" description="Worker Macro for tar">
