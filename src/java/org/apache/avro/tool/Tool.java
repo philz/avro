@@ -24,5 +24,11 @@ import java.util.List;
  * interface for delegation by {@link Main}.
  */
 public interface Tool {
+  /**
+   * Runs the tool with supplied arguments.
+   *
+   * @param args Non-null list of arguments.
+   * @throws Exception Just like main(), tools may throw Exception.
+   */
   void run(List<String> args) throws Exception;
 }
