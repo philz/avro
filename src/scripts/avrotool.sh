@@ -15,17 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs "avrotool", with paths corresponding
-# to a development checkout of AVRO.
+# This script runs "avrotool", with paths corresponding to a 
+# packaged version of AVRO.
 
-BASE_DIR=$(dirname "$0")/../../
-BUILD_DIR=${BASE_DIR}/build
-
+BASE_DIR=$(dirname "$0")
 # Add compiled classes to classpath
-CLASSPATH="$BUILD_DIR/classes"
+CLASSPATH="$BASE_DIR/avro-@VERSION@.jar"
 
 # Add libs to classpath
-for lib in $BUILD_DIR/lib/*.jar; do
+for lib in $BASE_DIR/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$lib
 done
 

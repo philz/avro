@@ -541,6 +541,12 @@
       <fileset file="ivy.xml"/>
     </copy>
 
+    <copy file="src/scripts/avrotool.sh" tofile="${dist.dir}/avrotool">
+      <filterset>
+        <filter token="VERSION" value="${version}"/>
+      </filterset>
+    </copy>
+    <chmod file="${dist.dir}/avrotool" perm="ugo+rx"/>
   </target>
 
   <macrodef name="macro_tar" description="Worker Macro for tar">
