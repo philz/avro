@@ -15,15 +15,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs "avrotool", with paths corresponding to a 
-# packaged version of AVRO.
+# Runs "org.apache.avro.tool.Main", avro's Java tool catch-all.
 
-BASE_DIR=$(dirname "$0")
-# Add compiled classes to classpath
-CLASSPATH="$BASE_DIR/avro-@VERSION@.jar"
+# This tool might be run out of the source, tree, in which
+# case we run in "development" mode against compiled jars,
+# or out of the packaged tarball.
+TOOL_DIR=$(dirname "$0")
+DEV=true
+if [ -d "${TOOL_DIR}/build/classes" ]; then
+  CLASSPATH=${TOOL_DIR}/build/classes
+  LIB_DIR=${TOOL_DIR}/build/lib
+elif [ -d "${TOOL_DIR}/../../build/classes" ]; then
+  CLASSPATH=${TOOL_DIR}/../../build/classes
+  LIB_DIR=${TOOL_DIR}/../../build/lib
+else
+  AVRO_JAR=${TOOL_DIR}/avro-@VERSION@.jar
+  if [ ! -f $AVRO_JAR ]; then
+    echo "Could not find Avro jar file ($AVRO_JAR)."
+    exit 1
+  fi
+  CLASSPATH=$AVRO_JAR
+  LIB_DIR=${TOOL_DIR}/lib
+  DEV=false
+fi
 
 # Add libs to classpath
-for lib in $BASE_DIR/lib/*.jar; do
+for lib in $LIB_DIR/*.jar; do
   CLASSPATH=${CLASSPATH}:$lib
 done
 
@@ -33,5 +50,9 @@ if [ "$JAVA_HOME" = "" ]; then
 fi
 
 JAVA=$JAVA_HOME/bin/java
+
+if $DEV; then
+  echo "Running development avro with classpath $CLASSPATH."
+fi
 
 exec ${JAVA} -classpath $CLASSPATH org.apache.avro.tool.Main $*
