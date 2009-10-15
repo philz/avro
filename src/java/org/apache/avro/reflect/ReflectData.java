@@ -217,7 +217,8 @@ public class ReflectData extends GenericData {
   /**
    * Create a schema for a type and it's fields. Note that by design only fields
    * of the direct class, not it's super classes, are used for creating the
-   * schema.  Also, fields are not permitted to be null.
+   * schema.  Also, fields are not permitted to be null.  Javadoc is unavailable
+   * via reflection, so the "doc" field of the schema is simply null.
    */
   @SuppressWarnings(value="unchecked")
   protected Schema createSchema(java.lang.reflect.Type type,
@@ -269,28 +270,28 @@ public class ReflectData extends GenericData {
           Enum[] constants = (Enum[])c.getEnumConstants();
           for (int i = 0; i < constants.length; i++)
             symbols.add(constants[i].name());
-          schema = Schema.createEnum(name, space, symbols);
+          schema = Schema.createEnum(name, null /* doc */, space, symbols);
           names.put(fullName, schema);
           return schema;
         }
                                                   // fixed
         if (GenericFixed.class.isAssignableFrom(c)) {
           int size = ((FixedSize)c.getAnnotation(FixedSize.class)).value();
-          schema = Schema.createFixed(name, space, size);
+          schema = Schema.createFixed(name, null /* doc */, space, size);
           names.put(fullName, schema);
           return schema;
         }
                                                   // record
         LinkedHashMap<String,Schema.Field> fields =
           new LinkedHashMap<String,Schema.Field>();
-        schema = Schema.createRecord(name, space,
+        schema = Schema.createRecord(name, null /* doc */, space,
                                      Throwable.class.isAssignableFrom(c));
         if (!names.containsKey(fullName))
           names.put(fullName, schema);
         for (Field field : c.getDeclaredFields())
           if ((field.getModifiers()&(Modifier.TRANSIENT|Modifier.STATIC))==0) {
             Schema fieldSchema = createFieldSchema(field, names);
-            fields.put(field.getName(), new Schema.Field(fieldSchema, null));
+            fields.put(field.getName(), new Schema.Field(fieldSchema, null, null));
           }
         schema.setFields(fields);
       }
@@ -338,7 +339,7 @@ public class ReflectData extends GenericData {
     java.lang.reflect.Type[] paramTypes = method.getGenericParameterTypes();
     for (int i = 0; i < paramTypes.length; i++)
       fields.put(paramNames[i],
-                 new Schema.Field(createSchema(paramTypes[i], names), null));
+                 new Schema.Field(createSchema(paramTypes[i], names), null, null));
     Schema request = Schema.createRecord(fields);
 
     Schema response = createSchema(method.getGenericReturnType(), names);

@@ -185,6 +185,7 @@ public class SpecificCompiler {
     try {
       switch (schema.getType()) {
       case RECORD:
+        doc(0, schema);
         line(0, "public class "+type(schema)+
              (schema.isError()
               ? " extends SpecificExceptionBase"
@@ -194,16 +195,19 @@ public class SpecificCompiler {
         line(1, "public static final Schema _SCHEMA = Schema.parse(\""
              +esc(schema)+"\");");
         // field declations
-        for (Map.Entry<String, Schema> field : schema.getFieldSchemas())
+        for (Map.Entry<String, Schema> field : schema.getFieldSchemas()) {
+          doc(1, field.getValue());
           line(1,"public "+unbox(field.getValue())+" "+field.getKey()+";");
+        }
         // schema method
         line(1, "public Schema getSchema() { return _SCHEMA; }");
         // get method
         line(1, "public Object get(int _field) {");
         line(2, "switch (_field) {");
         int i = 0;
-        for (Map.Entry<String, Schema> field : schema.getFieldSchemas())
+        for (Map.Entry<String, Schema> field : schema.getFieldSchemas()) {
           line(2, "case "+(i++)+": return "+field.getKey()+";");
+        }
         line(2, "default: throw new AvroRuntimeException(\"Bad index\");");
         line(2, "}");
         line(1, "}");
@@ -221,6 +225,7 @@ public class SpecificCompiler {
         line(0, "}");
         break;
       case ENUM:
+        doc(0, schema);
         line(0, "public enum "+type(schema)+" { ");
         StringBuilder b = new StringBuilder();
         int count = 0;
@@ -233,6 +238,7 @@ public class SpecificCompiler {
         line(0, "}");
         break;
       case FIXED:
+        doc(0, schema);
         line(0, "@FixedSize("+schema.getFixedSize()+")");
         line(0, "public class "+type(schema)+" extends SpecificFixed {}");
         break;
@@ -244,6 +250,20 @@ public class SpecificCompiler {
     } finally {
       out.close();
     }
+  }
+
+  private void doc(int indent, Schema schema) throws IOException {
+    String doc = schema.getDoc();
+    if (doc != null) {
+      line(indent, "/** " + escapeForJavaDoc(doc) + " */");
+    }
+  }
+
+  /**
+   * TODO(philip) XXX figure out proper escaping
+   */
+  private String escapeForJavaDoc(String doc) {
+    return doc;
   }
 
   private static final Schema NULL_SCHEMA = Schema.create(Schema.Type.NULL);

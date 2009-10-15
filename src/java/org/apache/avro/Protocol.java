@@ -318,6 +318,7 @@ public class Protocol {
         throw new SchemaParseException("No param type: "+field);
       fields.put(fieldNameNode.getTextValue(),
                  new Field(Schema.parse(fieldTypeNode,types),
+                           null, /* TODO(philip) */
                            field.get("default")));
     }
     Schema request = Schema.createRecord(fields);

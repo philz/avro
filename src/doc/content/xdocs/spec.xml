@@ -86,15 +86,19 @@
         <section id="schema_record">
           <title>Records</title>
           
-	  <p>Records use the type name "record" and support two attributes:</p>
+	  <p>Records use the type name "record" and support three attributes:</p>
 	  <ul>
 	    <li><code>name</code>: a JSON string providing the name
 	    of the record (required).</li>
+	    <li><code>doc</code>: a JSON string providing documentation to the
+	    user of this schema (optional).</li>
 	    <li><code>fields</code>: a JSON array, listing fields (required).
 	    Each field is a JSON object with the following attributes:
 	      <ul>
 		<li><code>name</code>: a JSON string providing the name
 		  of the field (required), and </li>
+		<li><code>doc</code>: a JSON string describing this field
+	    for users (optional).</li>
 		<li><code>type:</code> A JSON object defining a schema, or
 		  a JSON string naming a record definition
 		  (required).</li>
@@ -977,6 +981,10 @@
 	</li>
 	  
       </ul>
+      
+      <p>A schema's "doc" fields are ignored for the purposes of schema resolution.  Hence,
+      the "doc" portion of a schema may be dropped at serialization.</p>
+	
     </section>
   </body>
 </document>
