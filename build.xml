@@ -671,10 +671,6 @@
              classname="prantl.ant.eclipse.EclipseTask"
              classpathref="java.classpath" />
     <eclipse updatealways="true">
-      <settings>
-        <jdtcore compilercompliance="6.0" />
-        <resources encoding="UTF-8" />
-      </settings>
       <project name="${ant.project.name}" />
       <classpath>
         <!-- Use Eclipse to compile Avro runtime -->
