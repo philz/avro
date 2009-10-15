@@ -30,6 +30,7 @@ import java.util.HashSet;
 import org.apache.avro.Protocol;
 import org.apache.avro.Schema;
 import org.apache.avro.Protocol.Message;
+import org.apache.avro.tool.Tool;
 
 /** Generate specific Java interfaces and classes for protocols and schemas. */
 public class SpecificCompiler {
@@ -304,6 +305,30 @@ public class SpecificCompiler {
   public static void main(String[] args) throws Exception {
     //compileSchema(new File(args[0]), new File(args[1]));
     compileProtocol(new File(args[0]), new File(args[1]));
+  }
+  
+  /**
+   * Implementation of Tool for inclusion by 'avrotool'.
+   */
+  public static class SpecificCompilerTool implements Tool {
+    @Override
+    public void run(List<String> args) throws IOException {
+      if (args.size() != 3) {
+        System.err.println("Expected 3 arguments: (schema|protocol) inputfile outputdir");
+        return;
+      }
+      String method = args.get(0);
+      File input = new File(args.get(1));
+      File output = new File(args.get(2));
+      if ("schema".equals(method)) {
+        compileSchema(input, output);
+      } else if ("protocol".equals(method)) {
+        compileProtocol(input, output);
+      } else {
+        System.err.println("Expected \"schema\" or \"protocol\".");
+        return;
+      } 
+    }
   }
 
 }
