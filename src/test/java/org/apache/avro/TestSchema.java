@@ -328,5 +328,4 @@ public class TestSchema {
     assertEquals("Wrong toString", expected, Schema.parse(expected.toString()));
   }
 
-
 }

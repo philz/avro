@@ -98,7 +98,7 @@
 		<li><code>name</code>: a JSON string providing the name
 		  of the field (required), and </li>
 		<li><code>doc</code>: a JSON string describing this field
-	    for users (optional).</li>
+                  for users (optional).</li>
 		<li><code>type:</code> A JSON object defining a schema, or
 		  a JSON string naming a record definition
 		  (required).</li>
@@ -155,6 +155,8 @@
 	  <ul>
 	    <li><code>name</code>: a JSON string providing the name
 	    of the enum (required).</li>
+	    <li><code>doc</code>: a JSON string providing documentation to the
+	    user of this schema (optional).</li>
 	    <li><code>symbols</code>: a JSON array, listing symbols,
 	    as JSON strings (required).</li>
 	  </ul>
@@ -983,7 +985,7 @@
       </ul>
       
       <p>A schema's "doc" fields are ignored for the purposes of schema resolution.  Hence,
-      the "doc" portion of a schema may be dropped at serialization.</p>
+        the "doc" portion of a schema may be dropped at serialization.</p>
 	
     </section>
   </body>

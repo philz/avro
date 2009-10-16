@@ -127,7 +127,8 @@ public abstract class Schema {
   }
 
   /** Create a union schema. */
-  public static Schema createFixed(String name, String doc, String space, int size) {
+  public static Schema createFixed(String name, String doc, String space,
+      int size) {
     return new FixedSchema(name, doc, space, size);
   }
 
@@ -770,8 +771,7 @@ public abstract class Schema {
           throw new SchemaParseException(
               "Fixed node must have positive size: " + schema);
         }
-        Schema result = new FixedSchema(name, doc, space, 
-            sizeNode.getIntValue());
+        Schema result = new FixedSchema(name, doc, space, size);
         if (name != null) {
           names.add(result);
         }

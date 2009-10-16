@@ -50,15 +50,17 @@ public class SpecificCompiler {
     this.protocol = null;
   }
 
-  
   /**
-   * Captures output file path, and file contents
+   * Captures output file path and contents.
    */
   static class OutputFile {
     String path;
     String contents;
     
-    /** Writes output to path destination. */
+    /** 
+     * Writes output to path destination directory, creating directories as 
+     * necessary. 
+     */
     void writeToDestination(File dest) throws IOException {
       File f = new File(dest, path);
       f.getParentFile().mkdirs();
@@ -369,7 +371,8 @@ public class SpecificCompiler {
     compileProtocol(new File(args[0]), new File(args[1]));
   }
   
-  /** Generates Java interface and classes for a protocol.
+  /** 
+   * Generates Java interface and classes for a protocol.
    * @param src the source Avro protocol file
    * @param dest the directory to place generated files in
    */
