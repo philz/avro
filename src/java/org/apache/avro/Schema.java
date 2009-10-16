@@ -702,23 +702,24 @@ public abstract class Schema {
   static Schema parse(JsonNode schema, Names names) {
     if (schema.isTextual()) {                     // name
       Schema result = names.get(schema.getTextValue());
-      if (result == null)
+      if (result == null) {
         throw new SchemaParseException("Undefined name: "+schema);
+      }
       return result;
     } else if (schema.isObject()) {
       String type = getTextRequired(schema, "type", "No type");
       String name = null, space = null, doc = null;
       if (type.equals("record") || type.equals("error")
           || type.equals("enum") || type.equals("fixed")) {
-        String key = "name";
         name = getTextRequired(schema, "name", "No name in schema");
         doc = getTextOptional(schema, "doc");
         space = getTextOptional(schema, "namespace");
         if (space == null) {
           space = names.space();
         }
-        if (names.space() == null && space != null)
+        if (names.space() == null && space != null) {
           names.space(space);                     // set default namespace
+        }
       }
       if (type.equals("record") || type.equals("error")) { // record
         LinkedHashMap<String,Field> fields = new LinkedHashMap<String,Field>();
@@ -822,5 +823,4 @@ public abstract class Schema {
       throw new RuntimeException(e);
     }
   }
-
 }

@@ -61,9 +61,7 @@ public class SpecificCompiler {
     /** Writes output to path destination. */
     void writeToDestination(File dest) throws IOException {
       File f = new File(dest, path);
-      if (!f.getParentFile().mkdirs()) {
-        throw new IOException("Could not create directory: " + f.toString());
-      }
+      f.getParentFile().mkdirs();
       FileWriter fw = new FileWriter(f);
       try {
         fw.write(contents);
@@ -138,6 +136,7 @@ public class SpecificCompiler {
     OutputFile outputFile = new OutputFile();
     outputFile.path = makePath(protocol.getName(), protocol.getNamespace());
     StringBuilder out = new StringBuilder();
+    header(out, protocol.getNamespace());
     line(out, 0, "public interface "+protocol.getName()+" {");
 
     out.append("\n");
@@ -302,10 +301,11 @@ public class SpecificCompiler {
   }
 
   /**
-   * TODO(philip) XXX figure out proper escaping
+   * Be sure that generated code will compile by replacing
+   * end-comment markers with the appropriate HTML entity.
    */
   private String escapeForJavaDoc(String doc) {
-    return doc;
+    return doc.replace("*/", "*&#47;");
   }
 
   private static final Schema NULL_SCHEMA = Schema.create(Schema.Type.NULL);
