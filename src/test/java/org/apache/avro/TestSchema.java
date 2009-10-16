@@ -39,10 +39,32 @@ import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.JsonDecoder;
 import org.apache.avro.io.JsonEncoder;
+import org.apache.avro.specific.TestSpecificCompiler;
 import org.apache.avro.util.Utf8;
 
 public class TestSchema {
 
+  public static final String BASIC_ENUM_SCHEMA = "{\"type\":\"enum\", \"name\":\"Test\","
+            +"\"symbols\": [\"A\", \"B\"]}";
+  
+  public static final String SCHEMA_WITH_DOC_TAGS = "{\n"
+      + "  \"type\": \"record\",\n"
+      + "  \"name\": \"outer_record\",\n"
+      + "  \"doc\": \"This is not a world record.\",\n"
+      + "  \"fields\": [\n"
+      + "    { \"type\": { \"type\": \"fixed\", \"doc\": \"Very Inner Fixed\", "
+      + "                  \"name\": \"very_inner_fixed\", \"size\": 1 },\n"
+      + "      \"doc\": \"Inner Fixed\", \"name\": \"inner_fixed\" },\n"
+      + "    { \"type\": \"string\",\n"
+      + "      \"name\": \"inner_string\",\n"
+      + "      \"doc\": \"Inner String\" },\n"
+      + "    { \"type\": { \"type\": \"enum\", \"doc\": \"Very Inner Enum\", \n"
+      + "                  \"name\": \"very_inner_enum\", \n"
+      + "                  \"symbols\": [ \"A\", \"B\", \"C\" ] },\n"
+      + "      \"doc\": \"Inner Enum\", \"name\": \"inner_enum\" },\n"
+      + "    { \"type\": [\"string\", \"int\"], \"doc\": \"Inner Union\", \n"
+      + "      \"name\": \"inner_union\" }\n" + "  ]\n" + "}\n";
+  
   private static final int COUNT =
     Integer.parseInt(System.getProperty("test.count", "10"));
 
@@ -115,9 +137,7 @@ public class TestSchema {
 
   @Test
   public void testEnum() throws Exception {
-    check("{\"type\":\"enum\", \"name\":\"Test\","
-          +"\"symbols\": [\"A\", \"B\"]}", "\"B\"", "B",
-          false);
+    check(BASIC_ENUM_SCHEMA, "\"B\"", "B", false);
   }
 
   @Test
@@ -184,25 +204,7 @@ public class TestSchema {
    */
   @Test
   public void testDocs() {
-    String jsonSchema = "{\n" + 
-    "  \"type\": \"record\",\n" + 
-    "  \"name\": \"outer_record\",\n" + 
-    "  \"doc\": \"This is not a world record.\",\n" + 
-    "  \"fields\": [\n" + 
-    "    { \"type\": { \"type\": \"fixed\", \"doc\": \"Very Inner Fixed\", " +
-    "                  \"name\": \"very_inner_fixed\", \"size\": 1 },\n" +
-    "      \"doc\": \"Inner Fixed\", \"name\": \"inner_fixed\" },\n" + 
-    "    { \"type\": \"string\", \"doc\": \"Inner String\", \n" +
-    "      \"name\": \"inner_string\" },\n" + 
-    "    { \"type\": { \"type\": \"enum\", \"doc\": \"Very Inner Enum\", \n" +
-    "                  \"name\": \"very_inner_enum\", \n" +
-    "                  \"symbols\": [ \"A\", \"B\", \"C\" ] },\n" +
-    "      \"doc\": \"Inner Enum\", \"name\": \"inner_enum\" },\n" + 
-    "    { \"type\": [\"string\", \"int\"], \"doc\": \"Inner Union\", \n" +
-    "      \"name\": \"inner_union\" }\n" + 
-    "  ]\n" + 
-    "}\n";
-    Schema schema = Schema.parse(jsonSchema);
+    Schema schema = Schema.parse(SCHEMA_WITH_DOC_TAGS);
     assertEquals("This is not a world record.", schema.getDoc());
     assertEquals("Inner Fixed", schema.getFields().get("inner_fixed").doc());
     assertEquals("Very Inner Fixed", schema.getFields().get("inner_fixed").schema().getDoc());
@@ -244,6 +246,8 @@ public class TestSchema {
       checkJson(schema, datum,
                   new GenericDatumWriter<Object>(),
                   new GenericDatumReader<Object>());
+      
+      assertTrue(null != TestSpecificCompiler.compileWithSpecificCompiler(schema));
     }
   }
 

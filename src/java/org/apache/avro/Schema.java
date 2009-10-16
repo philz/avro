@@ -706,24 +706,19 @@ public abstract class Schema {
         throw new SchemaParseException("Undefined name: "+schema);
       return result;
     } else if (schema.isObject()) {
-      JsonNode typeNode = schema.get("type");
-      if (typeNode == null)
-        throw new SchemaParseException("No type: "+schema);
-      String type = typeNode.getTextValue();
+      String type = getTextRequired(schema, "type", "No type");
       String name = null, space = null, doc = null;
       if (type.equals("record") || type.equals("error")
           || type.equals("enum") || type.equals("fixed")) {
         String key = "name";
-        name = getStringValueOrNull(schema, "name");
-        doc = getStringValueOrNull(schema, "doc");
-        space = getStringValueOrNull(schema, "namespace");
+        name = getTextRequired(schema, "name", "No name in schema");
+        doc = getTextOptional(schema, "doc");
+        space = getTextOptional(schema, "namespace");
         if (space == null) {
           space = names.space();
         }
         if (names.space() == null && space != null)
           names.space(space);                     // set default namespace
-        if (name == null)
-          throw new SchemaParseException("No name in schema: "+schema);
       }
       if (type.equals("record") || type.equals("error")) { // record
         LinkedHashMap<String,Field> fields = new LinkedHashMap<String,Field>();
@@ -734,11 +729,8 @@ public abstract class Schema {
         if (fieldsNode == null || !fieldsNode.isArray())
           throw new SchemaParseException("Record has no fields: "+schema);
         for (JsonNode field : fieldsNode) {
-          String fieldName = getStringValueOrNull(field, "name");
-          String fieldDoc = getStringValueOrNull(field, "doc");
-          if (fieldName == null) {
-            throw new SchemaParseException("No field name: "+field);
-          }
+          String fieldName = getTextRequired(field, "name", "No field name");
+          String fieldDoc = getTextOptional(field, "doc");
           JsonNode fieldTypeNode = field.get("type");
           if (fieldTypeNode == null)
             throw new SchemaParseException("No field type: "+field);
@@ -772,6 +764,11 @@ public abstract class Schema {
           throw new SchemaParseException(
               "Fixed node has no or non-integer size: " + schema);
         }
+        int size = sizeNode.getIntValue();
+        if (size <= 0) {
+          throw new SchemaParseException(
+              "Fixed node must have positive size: " + schema);
+        }
         Schema result = new FixedSchema(name, doc, space, 
             sizeNode.getIntValue());
         if (name != null) {
@@ -791,9 +788,27 @@ public abstract class Schema {
   }
 
   /**
+   * Extracts text value associated to key from the container JsonNode,
+   * and throws if it doesn't exist.
+   * 
+   * @param container Container where to find key.
+   * @param key Key to look for in container.
+   * @param error String to prepend to the SchemaParseException.
+   * @return
+   */
+  private static String getTextRequired(JsonNode container, String key,
+      String error) {
+    String out = getTextOptional(container, key);
+    if (null == out) {
+      throw new SchemaParseException(error + ": " + container);
+    }
+    return out;
+  }
+
+  /**
    * Extracts text value associated to key from the container JsonNode.
    */
-  private static String getStringValueOrNull(JsonNode container, String key) {
+  private static String getTextOptional(JsonNode container, String key) {
     JsonNode jsonNode = container.get(key);
     return jsonNode != null ? jsonNode.getTextValue() : null;
   }

@@ -18,14 +18,14 @@
 package org.apache.avro.specific;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.Writer;
-import java.io.OutputStreamWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.List;
-import java.util.HashSet;
 
 import org.apache.avro.Protocol;
 import org.apache.avro.Schema;
@@ -34,36 +34,54 @@ import org.apache.avro.tool.Tool;
 
 /** Generate specific Java interfaces and classes for protocols and schemas. */
 public class SpecificCompiler {
-  private File dest;
-  private Writer out;
-  private Set<Schema> queue = new HashSet<Schema>();
+  private final Set<Schema> queue = new HashSet<Schema>();
+  private final Protocol protocol;
 
-  private SpecificCompiler(File dest) {
-    this.dest = dest;                             // root directory for output
+  public SpecificCompiler(Protocol protocol) {
+    // enqueue all types 
+    for (Schema s : protocol.getTypes()) {
+      enqueue(s);
+    }
+    this.protocol = protocol;
+  }
+  
+  public SpecificCompiler(Schema schema) {
+    enqueue(schema);
+    this.protocol = null;
   }
 
-  /** Generates Java interface and classes for a protocol.
-   * @param src the source Avro protocol file
-   * @param dest the directory to place generated files in
+  
+  /**
+   * Captures output file path, and file contents
    */
-  public static void compileProtocol(File src, File dest) throws IOException {
-    SpecificCompiler compiler = new SpecificCompiler(dest);
-    Protocol protocol = Protocol.parse(src);
-    for (Schema s : protocol.getTypes())          // enqueue types
-      compiler.enqueue(s);
-    compiler.compileInterface(protocol);          // generate interface
-    compiler.compile();                           // generate classes for types
+  static class OutputFile {
+    String path;
+    String contents;
+    
+    /** Writes output to path destination. */
+    void writeToDestination(File dest) throws IOException {
+      File f = new File(dest, path);
+      if (!f.getParentFile().mkdirs()) {
+        throw new IOException("Could not create directory: " + f.toString());
+      }
+      FileWriter fw = new FileWriter(f);
+      try {
+        fw.write(contents);
+      } finally {
+        fw.close();
+      }
+    }
   }
 
   /** Generates Java classes for a schema. */
   public static void compileSchema(File src, File dest) throws IOException {
-    SpecificCompiler compiler = new SpecificCompiler(dest);
-    compiler.enqueue(Schema.parse(src));          // enqueue types
-    compiler.compile();                           // generate classes for types
+    Schema schema = Schema.parse(src);
+    SpecificCompiler compiler = new SpecificCompiler(schema);
+    compiler.compileToDestination(dest);                           // generate classes for types
   }
 
   /** Recursively enqueue schemas that need a class generated. */
-  private void enqueue(Schema schema) throws IOException {
+  private void enqueue(Schema schema) {
     if (queue.contains(schema)) return;
     switch (schema.getType()) {
     case RECORD:
@@ -95,69 +113,84 @@ public class SpecificCompiler {
   }
 
   /** Generate java classes for enqueued schemas. */
-  private void compile() throws IOException {
-    for (Schema schema : queue)
-      compile(schema);
+  Collection<OutputFile> compile() {
+    List<OutputFile> out = new ArrayList<OutputFile>();
+    for (Schema schema : queue) {
+      out.add(compile(schema));
+    }
+    if (protocol != null) {
+      out.add(compileInterface(protocol));
+    }
+    return out;
   }
-
-  private void compileInterface(Protocol protocol) throws IOException {
-    startFile(protocol.getName(), protocol.getNamespace());
-    try {
-      line(0, "public interface "+protocol.getName()+" {");
-
-      out.append("\n");
-      for (Map.Entry<String,Message> e : protocol.getMessages().entrySet()) {
-        String name = e.getKey();
-        Message message = e.getValue();
-        Schema request = message.getRequest();
-        Schema response = message.getResponse();
-        line(1, unbox(response)+" "+name+"("+params(request)+")");
-        line(2,"throws AvroRemoteException"+errors(message.getErrors())+";");
-      }
-      line(0, "}");
-    } finally {
-      out.close();
+  
+  private void compileToDestination(File dst) throws IOException {
+    for (Schema schema : queue) {
+      OutputFile o = compile(schema);
+      o.writeToDestination(dst);
+    }
+    if (protocol != null) {
+      compileInterface(protocol).writeToDestination(dst);
     }
   }
 
-  private void startFile(String name, String space) throws IOException {
-    File dir = new File(dest, space.replace('.', File.separatorChar));
-    if (!dir.exists())
-      if (!dir.mkdirs())
-        throw new IOException("Unable to create " + dir);
-    name = cap(name) + ".java";
-    out = new OutputStreamWriter(new FileOutputStream(new File(dir, name)));
-    header(space);
+  private OutputFile compileInterface(Protocol protocol) {
+    OutputFile outputFile = new OutputFile();
+    outputFile.path = makePath(protocol.getName(), protocol.getNamespace());
+    StringBuilder out = new StringBuilder();
+    line(out, 0, "public interface "+protocol.getName()+" {");
+
+    out.append("\n");
+    for (Map.Entry<String,Message> e : protocol.getMessages().entrySet()) {
+      String name = e.getKey();
+      Message message = e.getValue();
+      Schema request = message.getRequest();
+      Schema response = message.getResponse();
+      line(out, 1, unbox(response)+" "+name+"("+params(request)+")");
+      line(out, 2,"throws AvroRemoteException"+errors(message.getErrors())+";");
+    }
+    line(out, 0, "}");
+    
+    outputFile.contents = out.toString();
+    return outputFile;
   }
 
-  private void header(String namespace) throws IOException {
+  static String makePath(String name, String space) {
+    if (space == null || space.isEmpty()) {
+      return cap(name) + ".java";
+    } else {
+      return space.replace('.', File.separatorChar) + File.separatorChar + cap(name) + ".java";
+    }
+  }
+
+  private void header(StringBuilder out, String namespace) {
     if(namespace != null) {
-      line(0, "package "+namespace+";\n");
+      line(out, 0, "package "+namespace+";\n");
     }
-    line(0, "import java.nio.ByteBuffer;");
-    line(0, "import java.util.Map;");
-    line(0, "import org.apache.avro.Protocol;");
-    line(0, "import org.apache.avro.Schema;");
-    line(0, "import org.apache.avro.AvroRuntimeException;");
-    line(0, "import org.apache.avro.Protocol;");
-    line(0, "import org.apache.avro.util.Utf8;");
-    line(0, "import org.apache.avro.ipc.AvroRemoteException;");
-    line(0, "import org.apache.avro.generic.GenericArray;");
-    line(0, "import org.apache.avro.specific.SpecificExceptionBase;");
-    line(0, "import org.apache.avro.specific.SpecificRecordBase;");
-    line(0, "import org.apache.avro.specific.SpecificRecord;");
-    line(0, "import org.apache.avro.specific.SpecificFixed;");
-    line(0, "import org.apache.avro.reflect.FixedSize;");
+    line(out, 0, "import java.nio.ByteBuffer;");
+    line(out, 0, "import java.util.Map;");
+    line(out, 0, "import org.apache.avro.Protocol;");
+    line(out, 0, "import org.apache.avro.Schema;");
+    line(out, 0, "import org.apache.avro.AvroRuntimeException;");
+    line(out, 0, "import org.apache.avro.Protocol;");
+    line(out, 0, "import org.apache.avro.util.Utf8;");
+    line(out, 0, "import org.apache.avro.ipc.AvroRemoteException;");
+    line(out, 0, "import org.apache.avro.generic.GenericArray;");
+    line(out, 0, "import org.apache.avro.specific.SpecificExceptionBase;");
+    line(out, 0, "import org.apache.avro.specific.SpecificRecordBase;");
+    line(out, 0, "import org.apache.avro.specific.SpecificRecord;");
+    line(out, 0, "import org.apache.avro.specific.SpecificFixed;");
+    line(out, 0, "import org.apache.avro.reflect.FixedSize;");
     for (Schema s : queue)
       if (namespace == null
           ? (s.getNamespace() != null)
           : !namespace.equals(s.getNamespace()))
-        line(0, "import "+SpecificData.get().getClassName(s)+";");
-    line(0, "");
-    line(0, "@SuppressWarnings(\"all\")");
+        line(out, 0, "import "+SpecificData.get().getClassName(s)+";");
+    line(out, 0, "");
+    line(out, 0, "@SuppressWarnings(\"all\")");
   }
 
-  private String params(Schema request) throws IOException {
+  private String params(Schema request) {
     StringBuilder b = new StringBuilder();
     int count = 0;
     for (Map.Entry<String, Schema> param : request.getFieldSchemas()) {
@@ -171,7 +204,7 @@ public class SpecificCompiler {
     return b.toString();
   }
 
-  private String errors(Schema errs) throws IOException {
+  private String errors(Schema errs) {
     StringBuilder b = new StringBuilder();
     for (Schema error : errs.getTypes().subList(1, errs.getTypes().size())) {
       b.append(", ");
@@ -180,82 +213,91 @@ public class SpecificCompiler {
     return b.toString();
   }
 
-  private void compile(Schema schema) throws IOException {
-    startFile(schema.getName(), schema.getNamespace());
-    try {
-      switch (schema.getType()) {
-      case RECORD:
-        doc(0, schema);
-        line(0, "public class "+type(schema)+
-             (schema.isError()
-              ? " extends SpecificExceptionBase"
-               : " extends SpecificRecordBase")
-             +" implements SpecificRecord {");
-        // schema definition
-        line(1, "public static final Schema _SCHEMA = Schema.parse(\""
-             +esc(schema)+"\");");
-        // field declations
-        for (Map.Entry<String, Schema> field : schema.getFieldSchemas()) {
-          doc(1, field.getValue());
-          line(1,"public "+unbox(field.getValue())+" "+field.getKey()+";");
-        }
-        // schema method
-        line(1, "public Schema getSchema() { return _SCHEMA; }");
-        // get method
-        line(1, "public Object get(int _field) {");
-        line(2, "switch (_field) {");
-        int i = 0;
-        for (Map.Entry<String, Schema> field : schema.getFieldSchemas()) {
-          line(2, "case "+(i++)+": return "+field.getKey()+";");
-        }
-        line(2, "default: throw new AvroRuntimeException(\"Bad index\");");
-        line(2, "}");
-        line(1, "}");
-        // set method
-        line(1, "@SuppressWarnings(value=\"unchecked\")");
-        line(1, "public void set(int _field, Object _value) {");
-        line(2, "switch (_field) {");
-        i = 0;
-        for (Map.Entry<String, Schema> field : schema.getFieldSchemas())
-          line(2, "case "+(i++)+": "+field.getKey()+" = ("+
-               type(field.getValue())+")_value; break;");
-        line(2, "default: throw new AvroRuntimeException(\"Bad index\");");
-        line(2, "}");
-        line(1, "}");
-        line(0, "}");
-        break;
-      case ENUM:
-        doc(0, schema);
-        line(0, "public enum "+type(schema)+" { ");
-        StringBuilder b = new StringBuilder();
-        int count = 0;
-        for (String symbol : schema.getEnumSymbols()) {
-          b.append(symbol);
-          if (++count < schema.getEnumSymbols().size())
-            b.append(", ");
-        }
-        line(1, b.toString());
-        line(0, "}");
-        break;
-      case FIXED:
-        doc(0, schema);
-        line(0, "@FixedSize("+schema.getFixedSize()+")");
-        line(0, "public class "+type(schema)+" extends SpecificFixed {}");
-        break;
-      case MAP: case ARRAY: case UNION: case STRING: case BYTES:
-      case INT: case LONG: case FLOAT: case DOUBLE: case BOOLEAN: case NULL:
-        break;
-      default: throw new RuntimeException("Unknown type: "+schema);
+  private OutputFile compile(Schema schema) {
+    OutputFile outputFile = new OutputFile();
+    outputFile.path = makePath(schema.getName(), schema.getNamespace());
+    StringBuilder out = new StringBuilder();
+    header(out, schema.getNamespace());
+    switch (schema.getType()) {
+    case RECORD:
+      doc(out, 0, schema);
+      line(out, 0, "public class "+type(schema)+
+           (schema.isError()
+            ? " extends SpecificExceptionBase"
+             : " extends SpecificRecordBase")
+           +" implements SpecificRecord {");
+      // schema definition
+      line(out, 1, "public static final Schema _SCHEMA = Schema.parse(\""
+           +esc(schema)+"\");");
+      // field declations
+      for (Map.Entry<String, Schema.Field> field : schema.getFields().entrySet()) {
+        doc(out, 1, field.getValue());
+        line(out, 1,"public " + unbox(field.getValue().schema()) + " " + field.getKey() + ";");
       }
-    } finally {
-      out.close();
+      // schema method
+      line(out, 1, "public Schema getSchema() { return _SCHEMA; }");
+      // get method
+      line(out, 1, "public Object get(int _field) {");
+      line(out, 2, "switch (_field) {");
+      int i = 0;
+      for (Map.Entry<String, Schema> field : schema.getFieldSchemas()) {
+        line(out, 2, "case "+(i++)+": return "+field.getKey()+";");
+      }
+      line(out, 2, "default: throw new AvroRuntimeException(\"Bad index\");");
+      line(out, 2, "}");
+      line(out, 1, "}");
+      // set method
+      line(out, 1, "@SuppressWarnings(value=\"unchecked\")");
+      line(out, 1, "public void set(int _field, Object _value) {");
+      line(out, 2, "switch (_field) {");
+      i = 0;
+      for (Map.Entry<String, Schema> field : schema.getFieldSchemas())
+        line(out, 2, "case "+(i++)+": "+field.getKey()+" = ("+
+             type(field.getValue())+")_value; break;");
+      line(out, 2, "default: throw new AvroRuntimeException(\"Bad index\");");
+      line(out, 2, "}");
+      line(out, 1, "}");
+      line(out, 0, "}");
+      break;
+    case ENUM:
+      doc(out, 0, schema);
+      line(out, 0, "public enum "+type(schema)+" { ");
+      StringBuilder b = new StringBuilder();
+      int count = 0;
+      for (String symbol : schema.getEnumSymbols()) {
+        b.append(symbol);
+        if (++count < schema.getEnumSymbols().size())
+          b.append(", ");
+      }
+      line(out, 1, b.toString());
+      line(out, 0, "}");
+      break;
+    case FIXED:
+      doc(out, 0, schema);
+      line(out, 0, "@FixedSize("+schema.getFixedSize()+")");
+      line(out, 0, "public class "+type(schema)+" extends SpecificFixed {}");
+      break;
+    case MAP: case ARRAY: case UNION: case STRING: case BYTES:
+    case INT: case LONG: case FLOAT: case DOUBLE: case BOOLEAN: case NULL:
+      break;
+    default: throw new RuntimeException("Unknown type: "+schema);
     }
+      
+    outputFile.contents = out.toString();
+    return outputFile;
   }
 
-  private void doc(int indent, Schema schema) throws IOException {
-    String doc = schema.getDoc();
+  private void doc(StringBuilder out, int indent, Schema schema) {
+    doc(out, indent, schema.getDoc());
+  }
+  
+  private void doc(StringBuilder out, int indent, Schema.Field field) {
+    doc(out, indent, field.doc());
+  }
+  
+  private void doc(StringBuilder out, int indent, String doc) {
     if (doc != null) {
-      line(indent, "/** " + escapeForJavaDoc(doc) + " */");
+      line(out, indent, "/** " + escapeForJavaDoc(doc) + " */");
     }
   }
 
@@ -306,7 +348,7 @@ public class SpecificCompiler {
     }
   }
 
-  private void line(int indent, String text) throws IOException {
+  private void line(StringBuilder out, int indent, String text) {
     for (int i = 0; i < indent; i ++) {
       out.append("  ");
     }
@@ -318,13 +360,23 @@ public class SpecificCompiler {
     return name.substring(0,1).toUpperCase()+name.substring(1,name.length());
   }
 
-  private static String esc(Object o) {
+  static String esc(Object o) {
     return o.toString().replace("\"", "\\\"");
   }
 
   public static void main(String[] args) throws Exception {
     //compileSchema(new File(args[0]), new File(args[1]));
     compileProtocol(new File(args[0]), new File(args[1]));
+  }
+  
+  /** Generates Java interface and classes for a protocol.
+   * @param src the source Avro protocol file
+   * @param dest the directory to place generated files in
+   */
+  public static void compileProtocol(File src, File dest) throws IOException {
+    Protocol protocol = Protocol.parse(src);
+    SpecificCompiler compiler = new SpecificCompiler(protocol);
+    compiler.compileToDestination(dest);
   }
   
   /**
