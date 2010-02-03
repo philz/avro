@@ -79,11 +79,11 @@ class DataFileWriter(object):
     self._block_count = 0
     self._meta = {}
 
-
     if writers_schema is not None:
       if codec is None:
         codec = 'null'
-      assert codec in VALID_CODECS, "Unknown codec: " + codec
+      if codec not in VALID_CODECS:
+        raise DataFileException("Unknown codec: " + codec)
       self._sync_marker = DataFileWriter.generate_sync_marker()
       self.set_meta('avro.codec', codec)
       self.set_meta('avro.schema', str(writers_schema))
@@ -133,7 +133,6 @@ class DataFileWriter(object):
     self.datum_writer.write_data(META_SCHEMA, header, self.encoder)
 
   # TODO(hammer): make a schema for blocks and use datum_writer
-  # TODO(hammer): use codec when writing the block contents
   def _write_block(self):
     if self.block_count > 0:
       # write number of items in block
@@ -146,7 +145,7 @@ class DataFileWriter(object):
       elif self.get_meta(CODEC_KEY) == 'deflate':
         # The first two characters and last character are zlib
         # wrappers around deflate data.
-        compressed_data = zlib.compress(self.buffer_writer.getvalue())[2:-1]
+        compressed_data = zlib.compress(uncompressed_data)[2:-1]
       else:
         fail_msg = '"%s" codec is not supported.' % self.get_meta(CODEC_KEY)
         raise DataFileException(fail_msg)
@@ -210,7 +209,6 @@ class DataFileReader(object):
       self.codec = "null"
     if self.codec not in VALID_CODECS:
       raise DataFileException('Unknown codec: %s.' % self.codec)
-    self.codec = self.codec
 
     # get file length
     self._file_length = self.determine_file_length()
@@ -260,7 +258,8 @@ class DataFileReader(object):
     self.reader.seek(0, 0) 
 
     # read header into a dict
-    header = self.datum_reader.read_data(META_SCHEMA, META_SCHEMA, self.raw_decoder)
+    header = self.datum_reader.read_data(
+      META_SCHEMA, META_SCHEMA, self.raw_decoder)
 
     # check magic number
     if header.get('magic') != MAGIC:
@@ -278,9 +277,11 @@ class DataFileReader(object):
     self.block_count = self.raw_decoder.read_long()
     if self.codec == "null":
       # Skip a long; we don't need to use the length.
-      self.raw_decoder.read_long()
+      self.raw_decoder.skip_long()
       self._datum_decoder = self._raw_decoder
     else:
+      # Compressed data is stored as (length, data), which
+      # corresponds to have bytes is stored.
       data = self.raw_decoder.read_bytes()
       uncompressed = zlib.decompress(data, -15)
       self._datum_decoder = io.BinaryDecoder(cStringIO.StringIO(uncompressed))
